@@ -4,7 +4,7 @@ Personal Claude Code skills. Each folder is one skill.
 
 | Skill | Use |
 |-------|-----|
-| `model-effort` | `/model-effort <brain dump>` at the start of a conversation. Recommends a model and effort level for the task. |
+| `model-effort` | `/model-effort <brain dump>` at the start of a conversation. Offers 2-3 model and effort options, cheapest first, with a lean. You choose. |
 
 The grid in `model-effort/SKILL.md` is transcribed from `docs/model-effort-cheatsheet.png`.
 

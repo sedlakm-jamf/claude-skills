@@ -1,6 +1,6 @@
 ---
 name: model-effort
-description: Pick the cheapest Claude model and effort level that will do your task, with the commands to switch. Run before starting the task.
+description: Lay out 2-3 model and effort options for your task, cheapest first, with cost, risk and the switch commands. You choose. Run before starting the task.
 argument-hint: [rough description of the task]
 disable-model-invocation: true
 model: sonnet
@@ -9,7 +9,7 @@ effort: low
 
 # Model + effort picker
 
-Goal: spend the fewest tokens and dollars that still finish the task. Recommend the cheapest pair likely to work. A retry on a cheap pair costs less than overpaying on every task, so escalate only when the cheap pair shows a failure sign.
+Goal: steer the user toward the fewest tokens and dollars that still finish the task. Offer options and let the user choose. Anchor on the cheapest pair likely to work, because a retry on a cheap pair costs less than overpaying on every task.
 
 The task is in `$ARGUMENTS`. If it is empty or whitespace, ask "What are you about to work on?" and stop.
 
@@ -42,32 +42,37 @@ Rules for the ladder:
 - Move up one rung per failure sign. Skip rungs only for stakes.
 - A human review step between phases lowers the stakes of the earlier phase.
 
-If you cannot place the task (a lookup or a redesign?), ask at most two short questions about scope and stakes, then stop. Recommend after the user answers. If the user declines to answer, recommend Sonnet · medium.
+If you cannot place the task (a lookup or a redesign?), ask at most two short questions about scope and stakes, then stop. Offer options after the user answers. If the user declines to answer, build the options around Sonnet · medium.
 
 ## Splitting
 
-When phases land on different rungs, give Opus the smallest phase and the cheaper model the volume. Typical split: plan on Opus · medium, then execute on Sonnet · low or medium. Split only at a natural boundary, such as after plan approval, since each switch reloads the prompt cache. In a split, the execution phase goes to Sonnet or Haiku even when it is a wide mechanical sweep; Opus · low is for a one-pass job on big input. Keep one recommendation when every phase lands on the same rung.
+When phases land on different rungs, give Opus the smallest phase and the cheaper model the volume. Typical split: plan on Opus · medium, then execute on Sonnet · low or medium. Split only at a natural boundary, such as after plan approval, since each switch reloads the prompt cache. In a split, the execution phase goes to Sonnet or Haiku even when it is a wide mechanical sweep; Opus · low is for a one-pass job on big input. Offer no split when every phase lands on the same rung.
 
 ## Answer format
 
+Offer 2-3 options, cheapest first, taken from the ladder: the first rung that fits, one rung up, and a safe rung only when stakes or breadth justify it. Skip an option that duplicates another. The user decides; you steer with cost and risk.
+
 ```
-**Recommendation: Haiku · low**
-<One or two sentences on why this is the cheapest pair that fits.>
+**Options for <task in a few words>**
 
-Switch with:
-/model haiku
-/effort low
+1. **Haiku · low** (cheapest): <what it handles>. Risk: <what may go wrong>.
+2. **Sonnet · low**: <what it adds>. Risk: <...>.
+3. **Sonnet · medium** (safest): <what it adds>. Cost: <relative to option 1>.
 
-Step up if: <the concrete sign this was too small, such as it misses files, loops, or gets edge cases wrong>.
-Step down if: <the concrete sign it is overkill>.
+Lean: option 1, because <one sentence>. Move to the next option if <concrete failure sign>.
+
+Switch with (copy the pair you pick):
+1. /model haiku, then /effort low
+2. /model sonnet, then /effort low
+3. /model sonnet, then /effort medium
 ```
 
-Fill in the exact commands for the chosen pair. Omit "Step up" for Opus · high and "Step down" for Haiku · low. Omit any line where you have no concrete sign to name.
-
-For a split, give each phase its own heading, `Switch with` block, and step lines, and name the switch point.
+For a split, list the split as one option (name each phase's pair and the switch point) and a single-pair run as another.
 
 ## Rules
 
-- Recommend only haiku, sonnet, opus and low, medium, high.
-- Give both commands in every block. Skip one only when the user's arguments state a current setting that already matches. This skill's own `model` and `effort` frontmatter describe the picker, not the user's session. `/effort status` prints the current effort.
-- End with the recommendation. The user switches, then starts the task.
+- Offer only haiku, sonnet, opus and low, medium, high.
+- Never decide for the user. Mark a lean, then stop. The lean is the cheapest option unless stakes or a failed earlier attempt point higher; say which.
+- Label an option "(cheapest)" or "(safest)" only if it is.
+- Give both commands for every option. Skip one only when the user's arguments state a current setting that already matches. This skill's own `model` and `effort` frontmatter describe the picker, not the user's session. `/effort status` prints the current effort.
+- End after the switch commands. The user picks, switches, then starts the task.
