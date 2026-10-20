@@ -2,11 +2,11 @@
 
 Personal Claude Code skills. Each folder is one skill.
 
-| Skill | Use |
-|-------|-----|
-| `model-effort` | `/model-effort <brain dump>` at the start of a conversation. Offers 2-3 model and effort options, cheapest first, with a lean. You choose. |
+## Skills
 
-The grid in `model-effort/SKILL.md` is transcribed from `docs/model-effort-cheatsheet.png`.
+- `model-effort`: run `/model-effort <rough description>` before a task or in the middle of one. Shows a menu of 2-3 model and effort options, cheapest expected cost first, with a lean. You choose; it prints the `/model` and `/effort` commands.
+
+The ladder in `model-effort/SKILL.md` is based on `docs/model-effort-cheatsheet.png`.
 
 ## Install
 
