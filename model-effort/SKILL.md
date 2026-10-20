@@ -1,6 +1,6 @@
 ---
 name: model-effort
-description: Lay out 2-3 model and effort options for your task, cheapest first, with cost, risk and the switch commands. You choose. Run before starting the task.
+description: Offer 2-3 model and effort options for your task as a menu you pick from, cheapest expected cost first. Run before a task or in the middle of one.
 argument-hint: [rough description of the task]
 disable-model-invocation: true
 model: sonnet
@@ -9,70 +9,57 @@ effort: low
 
 # Model + effort picker
 
-Goal: steer the user toward the fewest tokens and dollars that still finish the task. Offer options and let the user choose. Anchor on the cheapest pair likely to work, because a retry on a cheap pair costs less than overpaying on every task.
+Goal: steer the user toward the lowest token and dollar spend that still finishes the task. Offer the options with the lowest expected cost, counting a likely retry. The user decides.
 
-The task is in `$ARGUMENTS`. If it is empty or whitespace, ask "What are you about to work on?" and stop.
+The task is in `$ARGUMENTS`. If it is blank and the conversation contains a task (a request, a file, a failing command), state it in one line starting "Assuming:" and continue. If neither gives a task, ask "What are you about to work on?" and stop.
 
-## Grid
+## Ladder
 
-|            | Haiku | Sonnet | Opus |
-|------------|-------|--------|------|
-| **Low**    | Rewrites, extraction, quick lookups | Chat, quick drafts, small edits | Long docs and threads with a clear task |
-| **Medium** | Short summaries, classification, simple Q&A | Everyday default: scripts, docs, small features | Complex builds, planning across many files |
-| **High**   | Worth a try at this price | Tricky but bounded problems | The hardest problems, when wrong is expensive |
+Rungs group tasks by shape. When you list options, order them by expected cost.
 
-Cost rises from Haiku to Sonnet to Opus, and from low to high. One measured task from the source cheat sheet: Opus · low $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. Sonnet · high costs more than Opus · low, so for a big task with a clear goal, choose Opus · low over Sonnet · high.
-
-## Choosing
-
-Walk this ladder from the top and stop at the first rung that fits.
-
-1. **Haiku · low:** volume text work (rewrites, extraction, lookups) and trivial code edits: typos, one unambiguous rename in one file, formatting, a config value.
+1. **Haiku · low:** volume text work (rewrites, extraction, lookups) and code edits confined to one file and checkable by a diff: typos, formatting, a config value, one unambiguous rename.
 2. **Haiku · medium:** text work that needs judgment: short summaries, classification, simple Q&A.
-3. **Sonnet · low:** code edits with a little logic, quick drafts, chat.
+3. **Sonnet · low:** code edits with a little logic, any code edit across several files or that a diff cannot verify, quick drafts, chat.
 4. **Sonnet · medium:** real coding in 1-3 files: scripts, features, a bug in a known place, docs.
 5. **Sonnet · high:** a subtle bug or tricky logic in a bounded area.
-6. **Opus · low:** big input, clear goal: long documents, long threads, wide mechanical sweeps.
+6. **Opus · low:** one pass over big input with a clear goal: long documents, long threads.
 7. **Opus · medium:** a design decision, or planning across many files.
 8. **Opus · high:** the hardest problems where a wrong answer costs money, security, or data, or after Sonnet · high failed.
 
-Rules for the ladder:
-- Opus needs a reason: many files held at once, a design decision, or high stakes. Without one, stay on Sonnet or Haiku.
-- Choose low effort whenever the task is clear and the work is mechanical, on any model. Raise effort for ambiguity or subtle logic.
-- Move up one rung per failure sign. Skip rungs only for stakes.
-- A human review step between phases lowers the stakes of the earlier phase.
+One measured task: Opus · low $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. For a large task with a clear goal, Opus · low costs less than Sonnet · high. State costs as "lower" or "higher"; never invent multipliers.
 
-If you cannot place the task (a lookup or a redesign?), ask at most two short questions about scope and stakes, then stop. Offer options after the user answers. If the user declines to answer, build the options around Sonnet · medium.
+## Choosing
+
+- Choose Opus only for many files held at once, a design decision, or high stakes.
+- A code edit that spans files, such as a repo-wide rename, starts at Sonnet · low. Haiku is for one file.
+- Choose low effort whenever the task is clear and mechanical, on any model. Raise effort for ambiguity or subtle logic.
+- After one failed attempt, jump to the rung that fits the failure: wrong logic goes to Sonnet · high or Opus · medium; missing context or breadth goes to Opus · low or medium. Never climb past two failed rungs.
+- If a human reviews the output between phases, treat the earlier phase as lower stakes.
+- When you cannot place the task, ask at most two short questions about scope and stakes, then stop. If the user skips them, build the options around Sonnet · medium.
+
+## Mid-conversation use
+
+The user may run this after a few prompts. Price the remaining work, not the work done.
+- Switching model reloads the prompt cache for the context you keep, so a long conversation makes a switch expensive. When the task builds on that context and the remaining work is small, add "Stay on your current model and effort" as an option.
+- When the task changed direction and the old context is large, always add a "Start fresh" option: `/clear` (or `/compact` to keep a summary), then the pair. Nothing is left to reload, and a smaller context lowers the cost of every later turn. It is usually the cheapest option.
 
 ## Splitting
 
-When phases land on different rungs, give Opus the smallest phase and the cheaper model the volume. Typical split: plan on Opus · medium, then execute on Sonnet · low or medium. Split only at a natural boundary, such as after plan approval, since each switch reloads the prompt cache. In a split, the execution phase goes to Sonnet or Haiku even when it is a wide mechanical sweep; Opus · low is for a one-pass job on big input. Offer no split when every phase lands on the same rung.
+Offer a split only when phases land on different rungs. Give Opus the smallest phase and Sonnet or Haiku the execution, even for a wide mechanical sweep. Typical split: plan on Opus · medium, then execute on Sonnet · low or medium. Split at a natural boundary, such as plan approval. A split counts as one of the options.
 
-## Answer format
+## Output
 
-Offer 2-3 options, cheapest first, taken from the ladder: the first rung that fits, one rung up, and a safe rung only when stakes or breadth justify it. Skip an option that duplicates another. The user decides; you steer with cost and risk.
+Show the options with AskUserQuestion: one question, 2-3 options, the lean first, the rest by expected cost.
+- **Label:** `<Model> · <effort>`, plus "(Recommended)" on the lean. Label "(cheapest)" or "(safest)" only when true.
+- **Description:** what it handles, its risk, its cost in words.
+- **Preview:** the two commands, one per line (`/model sonnet`, `/effort low`). For a split, two blocks headed "Now" and "After plan approval". For "Stay", write "No change".
 
-```
-**Options for <task in a few words>**
+The lean is the option with the lowest expected cost, unless stakes or a failed earlier attempt point higher; say which in its description.
 
-1. **Haiku · low** (cheapest): <what it handles>. Risk: <what may go wrong>.
-2. **Sonnet · low**: <what it adds>. Risk: <...>.
-3. **Sonnet · medium** (safest): <what it adds>. Cost: <relative to option 1>.
-
-Lean: option 1, because <one sentence>. Move to the next option if <concrete failure sign>.
-
-Switch with (copy the pair you pick):
-1. /model haiku, then /effort low
-2. /model sonnet, then /effort low
-3. /model sonnet, then /effort medium
-```
-
-For a split, list the split as one option (name each phase's pair and the switch point) and a single-pair run as another.
+After the user picks, print the commands in a code block and one line, "Move up if: <the concrete failure sign>". Then stop. The user switches and starts the task. If the user answers "Other", follow their text. If AskUserQuestion is unavailable, print the options as a numbered list with the same fields.
 
 ## Rules
 
 - Offer only haiku, sonnet, opus and low, medium, high.
-- Never decide for the user. Mark a lean, then stop. The lean is the cheapest option unless stakes or a failed earlier attempt point higher; say which.
-- Label an option "(cheapest)" or "(safest)" only if it is.
-- Give both commands for every option. Skip one only when the user's arguments state a current setting that already matches. This skill's own `model` and `effort` frontmatter describe the picker, not the user's session. `/effort status` prints the current effort.
-- End after the switch commands. The user picks, switches, then starts the task.
+- Give both commands for every option, unless the user said their current model or effort already matches; then omit that command.
+- Ignore this skill's own frontmatter (sonnet, low). It sets what the picker runs on, not the user's session. `/effort status` prints the session's effort.
