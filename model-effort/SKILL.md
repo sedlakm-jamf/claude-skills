@@ -33,7 +33,7 @@ One measured task: Opus · low $0.27, Sonnet · medium $0.13, Sonnet · high $0.
 - Choose Opus only for many files held at once, a design decision, or high stakes.
 - A code edit that spans files, such as a repo-wide rename, starts at Sonnet · low. Haiku is for one file.
 - Choose low effort whenever the task is clear and mechanical, on any model. Raise effort for ambiguity or subtle logic.
-- After one failed attempt, jump to the rung that fits the failure: wrong logic goes to Sonnet · high or Opus · medium; missing context or breadth goes to Opus · low or medium. Never climb past two failed rungs.
+- After one failed attempt, jump to the rung that fits the failure: wrong logic goes to Sonnet · high or Opus · medium; missing context or breadth goes to Opus · low or medium. After a second failure, go to Opus · high.
 - If a human reviews the output between phases, treat the earlier phase as lower stakes.
 - When you cannot place the task, ask at most two short questions about scope and stakes, then stop. If the user skips them, build the options around Sonnet · medium.
 
@@ -49,10 +49,10 @@ Offer a split only when phases land on different rungs. Give Opus the smallest p
 
 ## Output
 
-Show the options with AskUserQuestion: one question, 2-3 options, the lean first, the rest by expected cost.
+Show the options with AskUserQuestion: one question with the header "Model pair", 2-3 options, the lean first, the rest by expected cost.
 - **Label:** `<Model> · <effort>`, plus "(Recommended)" on the lean. Label "(cheapest)" or "(safest)" only when true.
 - **Description:** what it handles, its risk, its cost in words.
-- **Preview:** the two commands, one per line (`/model sonnet`, `/effort low`). For a split, two blocks headed "Now" and "After plan approval". For "Stay", write "No change".
+- **Preview:** the two commands, one per line (`/model sonnet`, `/effort low`). For a split, two blocks headed "Now" and "After plan approval". For "Stay", write "No change". New sessions start on Sonnet · medium, so for that pair write "Your new-session default; no change unless you switched this session."
 
 The lean is the option with the lowest expected cost, unless stakes or a failed earlier attempt point higher; say which in its description.
 
