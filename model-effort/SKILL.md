@@ -1,52 +1,62 @@
 ---
 name: model-effort
-description: Recommend a Claude model (Haiku, Sonnet, Opus) and effort level (low, medium, high) for a task, from a rough brain dump. Run at the start of a conversation, before the real work begins.
+description: Recommend a Claude model and effort level for a task you describe, with the commands to switch. Run before starting the task.
+argument-hint: [rough description of the task]
 disable-model-invocation: true
+model: sonnet
+effort: medium
 ---
 
 # Model + effort picker
 
-The user describes the task they are about to start, loosely. Pick the cheapest model and effort pair that will do the job well, and tell them what to type to switch. Both dials cost money: a bigger model or higher effort on an easy task is waste, and a smaller one on a hard task costs retries.
+The task is in the skill arguments: `$ARGUMENTS`. If they are empty or only whitespace, ask "What are you about to work on?" and end the turn.
+
+Pick the smallest model and effort pair that will do the job in one pass, starting from Sonnet · medium. A bigger model or higher effort on an easy task is waste, and a smaller one on a hard task costs retries.
 
 ## Cheat sheet
 
 |        | Haiku | Sonnet | Opus |
 |--------|-------|--------|------|
-| **Low** | Rewrites, extraction, quick lookups | Chat, quick drafts, small edits | Long docs and threads with a clear task (~$0.27 in our test) |
-| **Medium** | Short summaries, classification, simple Q&A | **Everyday default:** scripts, docs, small features (~$0.13 in our test) | Complex builds, planning across many files |
-| **High** | Worth a try at this price. Step up to Sonnet if it struggles | Tricky but bounded problems. Expect extras (~$0.61 in our test) | The hardest problems, when wrong is expensive |
+| **Low** | Rewrites, extraction, quick lookups | Chat, quick drafts, small edits | Long docs and threads with a clear task |
+| **Medium** | Short summaries, classification, simple Q&A | Everyday default: scripts, docs, small features | Complex builds, planning across many files |
+| **High** | Worth a try at this price. Step up to Sonnet if it struggles | Tricky but bounded problems. Expect extras | The hardest problems, when wrong is expensive |
 
-Reading the grid:
-- **Model** is about how hard the thinking is and how much context must be held at once. Opus earns its price on breadth (many files, long threads) and on stakes.
-- **Effort** is about how much the model deliberates before answering. Raise it for tricky, bounded problems; lower it when the task is clear and only the volume is large.
-- Opus at low effort beats Sonnet at high effort when the problem is big but well specified. Sonnet at high effort beats Opus at low when the problem is small but subtle.
+The cheat sheet's author measured one test task: Opus · low cost about $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. Compare these with each other, not with the user's task. The one lesson: raising effort can cost more than raising the model, so for a big but well-specified task, move up in model before effort.
 
-## Steps
+## Placing the task
 
-1. Read the brain dump. If it is too vague to place on the grid (no idea whether it is a lookup or a redesign), ask at most two short questions, then decide. Do not interview.
-2. Place the task on the grid. Judge by: scope (one file or many), ambiguity (clear task or open design), cost of being wrong (throwaway or production), and volume of context.
-3. Answer in the format below. Keep it short.
+Judge by scope (one file or many), ambiguity (clear task or open design), cost of being wrong (throwaway or production), context size, and length of the agent loop (many tool calls and edits favor a larger model, since small models drift over long runs).
+
+- **Model** is about breadth and stakes: how much must be held at once, and how bad a wrong answer is.
+- **Effort** is how hard it works on each step. It is a separate setting from the thinking budget; if the user asks about thinking, say so.
+- The grid describes chat-style work, so map code tasks by shape. A bounded change in 1-3 files is Sonnet · medium. Reading or changing many files, or a design decision, is Opus · medium. A subtle bug or a risky change to production code raises effort.
+- When two cells fit, take the cheaper one and name the step-up sign. Exception: code edits start at Sonnet, because a rename or edit that looks mechanical can still hit shadowed names or other scopes. Haiku is for text work (rewrites, extraction, classification, lookups). A trivial code edit is Sonnet · low; a bounded change with logic is Sonnet · medium.
+- When the task is long but simple (a big document, a clear extraction), context size outweighs task type: go up in model, keep effort low.
+- A human review step between phases lowers the stakes of the earlier phase.
+
+If the task cannot be placed (you cannot tell a lookup from a redesign), ask at most two short questions about scope and stakes, then end the turn. Once answered, give the recommendation.
 
 ## Answer format
 
 ```
-**Recommendation: <Model> · <effort>**
+**Recommendation: Sonnet · medium**
 <One or two sentences on why this cell fits the task.>
 
 Switch with:
-/model <haiku|sonnet|opus>
-/effort <low|medium|high>
+/model sonnet
+/effort medium
 
-Step up if: <the concrete sign that this was too small, e.g. it loops, misses files, or keeps getting edge cases wrong>.
-Step down if: <the concrete sign that this is overkill, if one exists>.
+Step up if: <the concrete sign this was too small, e.g. it loops, misses files, keeps getting edge cases wrong>.
+Step down if: <the concrete sign it is overkill>.
 ```
 
-If the task has distinct phases that suit different cells (for example planning across many files, then mechanical edits), recommend a split: the bigger setting for the planning phase and the smaller one for execution. Say where to switch.
+Fill in the exact commands for the chosen pair. Omit "Step up" for Opus · high and "Step down" for Haiku · low, since there is no cell beyond them. Also omit a line when you have no concrete sign to name; a filler sign is worse than none.
+
+If the task has phases that land in different cells, recommend a split: give each phase its own heading, `Switch with` block and step lines, and name the switch point ("after you approve the plan"). Give both commands in every block, even when a phase matches the other. Split only at a natural boundary, since each switch reloads the prompt cache. Do not split when every phase lands in the same cell.
 
 ## Rules
 
-- Default to Sonnet · medium when the task is ordinary. Move off it only with a reason you can state.
-- Never recommend Opus · high unless being wrong is expensive or earlier attempts failed.
-- You cannot change the model or effort yourself. Give the commands and let the user run them.
-- If the current session is already on the recommended pair, say so and stop.
-- Do not start the task. The skill ends with the recommendation.
+- Start from Sonnet · medium and move off it (to another model or effort) only for a reason you can state in a sentence.
+- Recommend Opus · high for the hardest problems when a wrong answer is expensive (money, security, data loss), or after an earlier attempt failed. Recommend only the three models (haiku, sonnet, opus) and three effort levels (low, medium, high), even if the session offers more.
+- The `model` and `effort` in this skill's frontmatter only set what the picker runs on; they say nothing about the user's session. Always give both commands, unless the user's arguments state their current setting and it already matches. `/effort status` prints the current effort.
+- Finish with the recommendation and the commands for the user to run. They start the task after switching.

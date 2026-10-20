@@ -6,6 +6,8 @@ Personal Claude Code skills. Each folder is one skill.
 |-------|-----|
 | `model-effort` | `/model-effort <brain dump>` at the start of a conversation. Recommends a model and effort level for the task. |
 
+The grid in `model-effort/SKILL.md` is transcribed from `docs/model-effort-cheatsheet.png`.
+
 ## Install
 
 Symlink a skill into `~/.claude/skills`:
