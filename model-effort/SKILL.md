@@ -1,62 +1,73 @@
 ---
 name: model-effort
-description: Recommend a Claude model and effort level for a task you describe, with the commands to switch. Run before starting the task.
+description: Pick the cheapest Claude model and effort level that will do your task, with the commands to switch. Run before starting the task.
 argument-hint: [rough description of the task]
 disable-model-invocation: true
 model: sonnet
-effort: medium
+effort: low
 ---
 
 # Model + effort picker
 
-The task is in the skill arguments: `$ARGUMENTS`. If they are empty or only whitespace, ask "What are you about to work on?" and end the turn.
+Goal: spend the fewest tokens and dollars that still finish the task. Recommend the cheapest pair likely to work. A retry on a cheap pair costs less than overpaying on every task, so escalate only when the cheap pair shows a failure sign.
 
-Pick the smallest model and effort pair that will do the job in one pass, starting from Sonnet · medium. A bigger model or higher effort on an easy task is waste, and a smaller one on a hard task costs retries.
+The task is in `$ARGUMENTS`. If it is empty or whitespace, ask "What are you about to work on?" and stop.
 
-## Cheat sheet
+## Grid
 
-|        | Haiku | Sonnet | Opus |
-|--------|-------|--------|------|
-| **Low** | Rewrites, extraction, quick lookups | Chat, quick drafts, small edits | Long docs and threads with a clear task |
+|            | Haiku | Sonnet | Opus |
+|------------|-------|--------|------|
+| **Low**    | Rewrites, extraction, quick lookups | Chat, quick drafts, small edits | Long docs and threads with a clear task |
 | **Medium** | Short summaries, classification, simple Q&A | Everyday default: scripts, docs, small features | Complex builds, planning across many files |
-| **High** | Worth a try at this price. Step up to Sonnet if it struggles | Tricky but bounded problems. Expect extras | The hardest problems, when wrong is expensive |
+| **High**   | Worth a try at this price | Tricky but bounded problems | The hardest problems, when wrong is expensive |
 
-The cheat sheet's author measured one test task: Opus · low cost about $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. Compare these with each other, not with the user's task. The one lesson: raising effort can cost more than raising the model, so for a big but well-specified task, move up in model before effort.
+Cost rises from Haiku to Sonnet to Opus, and from low to high. One measured task from the source cheat sheet: Opus · low $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. Sonnet · high costs more than Opus · low, so for a big task with a clear goal, choose Opus · low over Sonnet · high.
 
-## Placing the task
+## Choosing
 
-Judge by scope (one file or many), ambiguity (clear task or open design), cost of being wrong (throwaway or production), context size, and length of the agent loop (many tool calls and edits favor a larger model, since small models drift over long runs).
+Walk this ladder from the top and stop at the first rung that fits.
 
-- **Model** is about breadth and stakes: how much must be held at once, and how bad a wrong answer is.
-- **Effort** is how hard it works on each step. It is a separate setting from the thinking budget; if the user asks about thinking, say so.
-- The grid describes chat-style work, so map code tasks by shape. A bounded change in 1-3 files is Sonnet · medium. Reading or changing many files, or a design decision, is Opus · medium. A subtle bug or a risky change to production code raises effort.
-- When two cells fit, take the cheaper one and name the step-up sign. Exception: code edits start at Sonnet, because a rename or edit that looks mechanical can still hit shadowed names or other scopes. Haiku is for text work (rewrites, extraction, classification, lookups). A trivial code edit is Sonnet · low; a bounded change with logic is Sonnet · medium.
-- When the task is long but simple (a big document, a clear extraction), context size outweighs task type: go up in model, keep effort low.
+1. **Haiku · low:** volume text work (rewrites, extraction, lookups) and trivial code edits: typos, one unambiguous rename in one file, formatting, a config value.
+2. **Haiku · medium:** text work that needs judgment: short summaries, classification, simple Q&A.
+3. **Sonnet · low:** code edits with a little logic, quick drafts, chat.
+4. **Sonnet · medium:** real coding in 1-3 files: scripts, features, a bug in a known place, docs.
+5. **Sonnet · high:** a subtle bug or tricky logic in a bounded area.
+6. **Opus · low:** big input, clear goal: long documents, long threads, wide mechanical sweeps.
+7. **Opus · medium:** a design decision, or planning across many files.
+8. **Opus · high:** the hardest problems where a wrong answer costs money, security, or data, or after Sonnet · high failed.
+
+Rules for the ladder:
+- Opus needs a reason: many files held at once, a design decision, or high stakes. Without one, stay on Sonnet or Haiku.
+- Choose low effort whenever the task is clear and the work is mechanical, on any model. Raise effort for ambiguity or subtle logic.
+- Move up one rung per failure sign. Skip rungs only for stakes.
 - A human review step between phases lowers the stakes of the earlier phase.
 
-If the task cannot be placed (you cannot tell a lookup from a redesign), ask at most two short questions about scope and stakes, then end the turn. Once answered, give the recommendation.
+If you cannot place the task (a lookup or a redesign?), ask at most two short questions about scope and stakes, then stop. Recommend after the user answers. If the user declines to answer, recommend Sonnet · medium.
+
+## Splitting
+
+When phases land on different rungs, give Opus the smallest phase and the cheaper model the volume. Typical split: plan on Opus · medium, then execute on Sonnet · low or medium. Split only at a natural boundary, such as after plan approval, since each switch reloads the prompt cache. In a split, the execution phase goes to Sonnet or Haiku even when it is a wide mechanical sweep; Opus · low is for a one-pass job on big input. Keep one recommendation when every phase lands on the same rung.
 
 ## Answer format
 
 ```
-**Recommendation: Sonnet · medium**
-<One or two sentences on why this cell fits the task.>
+**Recommendation: Haiku · low**
+<One or two sentences on why this is the cheapest pair that fits.>
 
 Switch with:
-/model sonnet
-/effort medium
+/model haiku
+/effort low
 
-Step up if: <the concrete sign this was too small, e.g. it loops, misses files, keeps getting edge cases wrong>.
+Step up if: <the concrete sign this was too small, such as it misses files, loops, or gets edge cases wrong>.
 Step down if: <the concrete sign it is overkill>.
 ```
 
-Fill in the exact commands for the chosen pair. Omit "Step up" for Opus · high and "Step down" for Haiku · low, since there is no cell beyond them. Also omit a line when you have no concrete sign to name; a filler sign is worse than none.
+Fill in the exact commands for the chosen pair. Omit "Step up" for Opus · high and "Step down" for Haiku · low. Omit any line where you have no concrete sign to name.
 
-If the task has phases that land in different cells, recommend a split: give each phase its own heading, `Switch with` block and step lines, and name the switch point ("after you approve the plan"). Give both commands in every block, even when a phase matches the other. Split only at a natural boundary, since each switch reloads the prompt cache. Do not split when every phase lands in the same cell.
+For a split, give each phase its own heading, `Switch with` block, and step lines, and name the switch point.
 
 ## Rules
 
-- Start from Sonnet · medium and move off it (to another model or effort) only for a reason you can state in a sentence.
-- Recommend Opus · high for the hardest problems when a wrong answer is expensive (money, security, data loss), or after an earlier attempt failed. Recommend only the three models (haiku, sonnet, opus) and three effort levels (low, medium, high), even if the session offers more.
-- The `model` and `effort` in this skill's frontmatter only set what the picker runs on; they say nothing about the user's session. Always give both commands, unless the user's arguments state their current setting and it already matches. `/effort status` prints the current effort.
-- Finish with the recommendation and the commands for the user to run. They start the task after switching.
+- Recommend only haiku, sonnet, opus and low, medium, high.
+- Give both commands in every block. Skip one only when the user's arguments state a current setting that already matches. This skill's own `model` and `effort` frontmatter describe the picker, not the user's session. `/effort status` prints the current effort.
+- End with the recommendation. The user switches, then starts the task.
