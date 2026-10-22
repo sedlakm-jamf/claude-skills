@@ -1,11 +1,20 @@
 # claude-skills
 
-A small collection of [Claude Code](https://claude.com/claude-code) skills and agents. Each skill folder holds a `SKILL.md`.
+A small collection of [Claude Code](https://claude.com/claude-code) skills and agents. Each folder under a skill holds a `SKILL.md`; agents live in [`agents/`](agents/).
 
-| Name | Command | Purpose |
-|------|---------|---------|
+## Skills
+
+| Skill | Command | Purpose |
+|-------|---------|---------|
 | [`model-effort`](model-effort/SKILL.md) | `/model-effort <task>` | Recommend a model and effort level for a task |
-| [`subagent-tiers`](subagent-tiers/) | "run a low subagent" | Effort-tiered worker subagents (agents, not a skill) |
+
+## Agents
+
+| Agent | Trigger phrase | Purpose |
+|-------|----------------|---------|
+| [`worker-low`](agents/worker-low.md) | "low subagent" | Haiku at low effort |
+| [`worker-medium`](agents/worker-medium.md) | "subagent" or "medium" | Sonnet at medium effort |
+| [`worker-high`](agents/worker-high.md) | "high subagent" | Opus at high effort |
 
 ## model-effort
 
@@ -13,17 +22,11 @@ Helps you choose a cost-efficient model and effort level before starting a task,
 
 The decision ladder in [`model-effort/SKILL.md`](model-effort/SKILL.md) is based on the cheat sheet in [`docs/model-effort-cheatsheet.png`](docs/model-effort-cheatsheet.png).
 
-## subagent-tiers
+## Effort-tiered agents
 
-Three worker agents, one per effort tier:
+Three worker agents, one per effort tier. Each sets its `model` and `effort` in its frontmatter.
 
-| Agent | Model | Effort | Used when you say |
-|-------|-------|--------|-------------------|
-| `worker-low` | haiku | low | "low subagent" |
-| `worker-medium` | sonnet | medium | "subagent" or "medium" |
-| `worker-high` | opus | high | "high subagent" |
-
-`CLAUDE.snippet.md` is the routing rule to paste into `~/.claude/CLAUDE.md`. To add a tier, copy an agent file, change `name`, `model` and `effort`, and extend the rule.
+[`agents/CLAUDE.snippet.md`](agents/CLAUDE.snippet.md) is the routing rule to paste into `~/.claude/CLAUDE.md`; it maps your trigger phrase to an agent. To add a tier, copy an agent file, change `name`, `model` and `effort`, and extend the rule.
 
 ## Installation
 
@@ -38,7 +41,7 @@ Symlink the agents into `~/.claude/agents`:
 
 ```sh
 mkdir -p ~/.claude/agents
-for f in ~/claude-skills/subagent-tiers/worker-*.md; do ln -sf "$f" ~/.claude/agents/; done
+for f in ~/claude-skills/agents/worker-*.md; do ln -sf "$f" ~/.claude/agents/; done
 ```
 
 ## Disclaimer
