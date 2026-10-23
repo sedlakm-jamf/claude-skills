@@ -15,7 +15,7 @@ The task is in `$ARGUMENTS`. If it is blank and the conversation contains a task
 
 ## Ladder
 
-Rungs group tasks by shape. When you list options, order them by expected cost.
+Rungs group tasks by shape.
 
 1. **Haiku · low:** volume text work (rewrites, extraction, lookups) and code edits confined to one file and checkable by a diff: typos, formatting, a config value, one unambiguous rename.
 2. **Haiku · medium:** text work that needs judgment: short summaries, classification, simple Q&A.
@@ -25,8 +25,6 @@ Rungs group tasks by shape. When you list options, order them by expected cost.
 6. **Opus · low:** one pass over big input with a clear goal: long documents, long threads.
 7. **Opus · medium:** a design decision, or planning across many files.
 8. **Opus · high:** the hardest problems where a wrong answer costs money, security, or data, or after Sonnet · high failed.
-
-One measured task: Opus · low $0.27, Sonnet · medium $0.13, Sonnet · high $0.61. For a large task with a clear goal, Opus · low costs less than Sonnet · high. State costs as "lower" or "higher"; never invent multipliers.
 
 ## Choosing
 
@@ -51,15 +49,15 @@ Offer a split only when phases land on different rungs. Give Opus the smallest p
 
 Show the options with AskUserQuestion: one question with the header "Model pair", 2-3 options, the lean first, the rest by expected cost.
 - **Label:** `<Model> · <effort>`, plus "(Recommended)" on the lean. Label "(cheapest)" or "(safest)" only when true.
-- **Description:** what it handles, its risk, its cost in words.
+- **Description:** required on every option, never a bare label. One or two short sentences on why to choose this model and effort (what that model is good at, what the effort level buys), so the user learns the tradeoff. Then its risk and its cost as "lower" or "higher", never a number or multiplier.
 - **Preview:** the two commands, one per line (`/model sonnet`, `/effort low`). For a split, two blocks headed "Now" and "After plan approval". For "Stay", write "No change". New sessions start on Sonnet · medium, so for that pair write "Your new-session default; no change unless you switched this session."
 
 The lean is the option with the lowest expected cost, unless stakes or a failed earlier attempt point higher; say which in its description.
 
-After the user picks, print the commands in a code block and one line, "Move up if: <the concrete failure sign>". Then stop. The user switches and starts the task. If the user answers "Other", follow their text. If AskUserQuestion is unavailable, print the options as a numbered list with the same fields.
+After the user picks, print the commands in a code block and one line, "Move up if: <the concrete failure sign>". Then stop. The user switches and starts the task. If AskUserQuestion is unavailable, print a numbered list with the same fields, explanations included.
 
 ## Rules
 
 - Offer only haiku, sonnet, opus and low, medium, high.
 - Give both commands for every option, unless the user said their current model or effort already matches; then omit that command.
-- Ignore this skill's own frontmatter (sonnet, low). It sets what the picker runs on, not the user's session. `/effort status` prints the session's effort.
+- Ignore this skill's own frontmatter (sonnet, low). It sets what the picker runs on, not the user's session.
